@@ -3,12 +3,10 @@
 #include "Auxiliary.h"
 #include<thread>
 #include<conio.h>
+#include<windows.h>
 
 
 using namespace std::literals::chrono_literals;
-
-
-
 
 class Car
 {
@@ -113,17 +111,40 @@ public:
 	void get_out()
 	{	
 		driver_inside = false;
-		control.panel_thread.join();	
+		if (control.panel_thread.joinable()) control.panel_thread.join();	
 	}
 
-	void panel() const
+	void panel() 
 	{
 		while (driver_inside)
 		{
 			system("cls");
-			std::cout << "Engine is " << (engine.Started() ? "started" : "stoped") << ".\n";
+			std::cout << "Engine is "; /* << (engine.Started() ? "started" : "stoped") << ".\n";*/
+			if  (engine.Started())
+			{
+				Text_color(10);
+				std::cout << "started.\n";
+				Text_color(7);
+			}
+			else
+			{
+				Text_color(12);
+				std::cout <<  "stoped.\n";
+				Text_color(7);
+
+			}
 			std::cout << "Fuel level: " << tank.get_fuel() << std::endl;
+			
+			if (tank.get_fuel() < 5)
+			{				
+			 	Text_color(12);
+				std::cout << "LOW FUEL!" << std::endl;
+				Text_color(7);
+			}
+				
 			std::this_thread::sleep_for(1s);
+			if (tank.get_fuel() == 0) stop();
+				//if (control.engine_idle_thread.joinable()) control.engine_idle_thread.join();
 		}
 	}
 
@@ -141,14 +162,17 @@ public:
 	void stop()
 	{
 		engine.stop();
-		control.engine_idle_thread.join();
+		if (control.engine_idle_thread.joinable()) control.engine_idle_thread.join();
 	}
+
 	void engine_idle()
 	{
 		while (engine.Started() && tank.give_fuel(engine.get_consumption_per_second()))
 		{
 			std::this_thread::sleep_for(1s);			
 		}
+		/*if (tank.get_fuel() == 0)*/ engine.stop();
+		
 	}
 
 
@@ -182,26 +206,33 @@ int main()
 	std::cin.get();
 	car.get_in();
 
-	char key;
-
-	do
+	try
 	{
-		key = _getch();
-		switch (key)
+		char key;
+
+		do
 		{
-		case 13:
-			if (!car.get_engine().Started())car.start();
-			else car.stop();
-			break;
-		case 'f':
-			double amount;
-			std::cout << "How match?: ";
-			std::cin >> amount;
-			car.fill(amount);
-			break;
-		case 27:
-			car.stop();
-			car.get_out();
-		}
-	} while (key != 27);
+			key = _getch();
+			switch (key)
+			{
+			case 13:
+				if (!car.get_engine().Started())car.start();
+				else car.stop();
+				break;
+			case 'f':
+				double amount;
+				std::cout << "How match?: ";
+				std::cin >> amount;
+				car.fill(amount);
+				break;
+			case 27:
+				car.stop();
+				car.get_out();
+			}
+		} while (key != 27);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << std::endl;
+	}
 }
